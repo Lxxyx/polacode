@@ -2,6 +2,7 @@ const vscode = require('vscode')
 const fs = require('fs')
 const path = require('path')
 const { homedir } = require('os')
+const { copyImg } = require('img-clipboard')
 
 const writeSerializedBlobToFile = (serializeBlob, fileName) => {
   const bytes = new Uint8Array(serializeBlob.split(','))
@@ -26,20 +27,20 @@ function activate(context) {
       panel.webview.postMessage({
         type: 'restore',
         innerHTML: state.innerHTML,
-        bgColor: context.globalState.get('polacode.bgColor', '#2e3440')
+        bgColor: context.globalState.get('polacode.bgColor', '#2e3440'),
       })
       const selectionListener = setupSelectionSync()
       panel.onDidDispose(() => {
         selectionListener.dispose()
       })
       setupMessageListeners()
-    }
+    },
   })
 
   vscode.commands.registerCommand('polacode.activate', () => {
     panel = vscode.window.createWebviewPanel('polacode', P_TITLE, 2, {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'webview'))]
+      localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'webview'))],
     })
 
     panel.webview.html = getHtmlContent(htmlPath)
@@ -56,13 +57,13 @@ function activate(context) {
     panel.webview.postMessage({
       type: 'init',
       fontFamily,
-      bgColor
+      bgColor,
     })
 
     syncSettings()
   })
 
-  vscode.workspace.onDidChangeConfiguration(e => {
+  vscode.workspace.onDidChangeConfiguration((e) => {
     if (e.affectsConfiguration('polacode') || e.affectsConfiguration('editor')) {
       syncSettings()
     }
@@ -76,20 +77,25 @@ function activate(context) {
             .showSaveDialog({
               defaultUri: lastUsedImageUri,
               filters: {
-                Images: ['png']
-              }
+                Images: ['png'],
+              },
             })
-            .then(uri => {
+            .then((uri) => {
               if (uri) {
                 writeSerializedBlobToFile(data.serializedBlob, uri.fsPath)
                 lastUsedImageUri = uri
               }
             })
           break
+        case 'copy':
+          const bytes = Buffer.from(new Uint8Array(data.serializedBlob.split(',')), 'base64')
+          console.log(bytes)
+          copyImg(bytes)
+          break
         case 'getAndUpdateCacheAndSettings':
           panel.webview.postMessage({
             type: 'restoreBgColor',
-            bgColor: context.globalState.get('polacode.bgColor', '#2e3440')
+            bgColor: context.globalState.get('polacode.bgColor', '#2e3440'),
           })
 
           syncSettings()
@@ -115,16 +121,16 @@ function activate(context) {
       transparentBackground: settings.get('transparentBackground'),
       backgroundColor: settings.get('backgroundColor'),
       target: settings.get('target'),
-      ligature: editorSettings.get('fontLigatures')
+      ligature: editorSettings.get('fontLigatures'),
     })
   }
 
   function setupSelectionSync() {
-    return vscode.window.onDidChangeTextEditorSelection(e => {
+    return vscode.window.onDidChangeTextEditorSelection((e) => {
       if (e.selections[0] && !e.selections[0].isEmpty) {
         vscode.commands.executeCommand('editor.action.clipboardCopyWithSyntaxHighlightingAction')
         panel.postMessage({
-          type: 'update'
+          type: 'update',
         })
       }
     })

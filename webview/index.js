@@ -6,20 +6,21 @@
   let backgroundColor = '#f2f2f2'
 
   vscode.postMessage({
-    type: 'getAndUpdateCacheAndSettings'
+    type: 'getAndUpdateCacheAndSettings',
   })
 
   const snippetNode = document.getElementById('snippet')
   const snippetContainerNode = document.getElementById('snippet-container')
   const obturateur = document.getElementById('save')
+  const copy = document.getElementById('copy')
 
   snippetContainerNode.style.opacity = '1'
-  const oldState = vscode.getState();
+  const oldState = vscode.getState()
   if (oldState && oldState.innerHTML) {
     snippetNode.innerHTML = oldState.innerHTML
   }
 
-  const getInitialHtml = fontFamily => {
+  const getInitialHtml = (fontFamily) => {
     const cameraWithFlashEmoji = String.fromCodePoint(128248)
     const monoFontStack = `${fontFamily},SFMono-Regular,Consolas,DejaVu Sans Mono,Ubuntu Mono,Liberation Mono,Menlo,Courier,monospace`
     return `<meta charset="utf-8"><div style="color: #d8dee9;background-color: #2e3440; font-family: ${monoFontStack};font-weight: normal;font-size: 12px;line-height: 18px;white-space: pre;"><div><span style="color: #8fbcbb;">console</span><span style="color: #eceff4;">.</span><span style="color: #88c0d0;">log</span><span style="color: #d8dee9;">(</span><span style="color: #eceff4;">'</span><span style="color: #a3be8c;">0. Run command \`Polacode ${cameraWithFlashEmoji}\`</span><span style="color: #eceff4;">'</span><span style="color: #d8dee9;">)</span></div><div><span style="color: #8fbcbb;">console</span><span style="color: #eceff4;">.</span><span style="color: #88c0d0;">log</span><span style="color: #d8dee9;">(</span><span style="color: #eceff4;">'</span><span style="color: #a3be8c;">1. Copy some code</span><span style="color: #eceff4;">'</span><span style="color: #d8dee9;">)</span></div><div><span style="color: #8fbcbb;">console</span><span style="color: #eceff4;">.</span><span style="color: #88c0d0;">log</span><span style="color: #d8dee9;">(</span><span style="color: #eceff4;">'</span><span style="color: #a3be8c;">2. Paste into Polacode view</span><span style="color: #eceff4;">'</span><span style="color: #d8dee9;">)</span></div><div><span style="color: #8fbcbb;">console</span><span style="color: #eceff4;">.</span><span style="color: #88c0d0;">log</span><span style="color: #d8dee9;">(</span><span style="color: #eceff4;">'</span><span style="color: #a3be8c;">3. Click the button ${cameraWithFlashEmoji}</span><span style="color: #eceff4;">'</span><span style="color: #d8dee9;">)</span></div></div></div>`
@@ -40,12 +41,12 @@
     fileReader.readAsArrayBuffer(blob)
   }
 
-  function shoot(serializedBlob) {
+  function shoot(serializedBlob, type = 'shoot') {
     vscode.postMessage({
-      type: 'shoot',
+      type: type,
       data: {
-        serializedBlob
-      }
+        serializedBlob,
+      },
     })
   }
 
@@ -61,7 +62,7 @@
   }
   function getSnippetBgColor(html) {
     const match = html.match(/background-color: (#[a-fA-F0-9]+)/)
-    return match ? match[1] : undefined;
+    return match ? match[1] : undefined
   }
 
   function updateEnvironment(snippetBgColor) {
@@ -101,7 +102,7 @@
     return doc.body.innerHTML
   }
 
-  document.addEventListener('paste', e => {
+  document.addEventListener('paste', (e) => {
     const innerHTML = e.clipboardData.getData('text/html')
 
     const code = e.clipboardData.getData('text/plain')
@@ -112,8 +113,8 @@
       vscode.postMessage({
         type: 'updateBgColor',
         data: {
-          bgColor: snippetBgColor
-        }
+          bgColor: snippetBgColor,
+        },
       })
       updateEnvironment(snippetBgColor)
     }
@@ -129,13 +130,21 @@
 
   obturateur.addEventListener('click', () => {
     if (target === 'container') {
-      shootAll() 
+      shootAll()
     } else {
       shootSnippet()
     }
   })
 
-  function shootAll() {
+  copy.addEventListener('click', () => {
+    if (target === 'container') {
+      shootAll('copy')
+    } else {
+      shootSnippet('copy')
+    }
+  })
+
+  function shootAll(type = 'shoot') {
     const width = snippetContainerNode.offsetWidth * 2
     const height = snippetContainerNode.offsetHeight * 2
     const config = {
@@ -144,24 +153,24 @@
       style: {
         transform: 'scale(2)',
         'transform-origin': 'center',
-        background: getRgba(backgroundColor, transparentBackground)
-      }
+        background: getRgba(backgroundColor, transparentBackground),
+      },
     }
 
     // Hide resizer before capture
     snippetNode.style.resize = 'none'
     snippetContainerNode.style.resize = 'none'
 
-    domtoimage.toBlob(snippetContainerNode, config).then(blob => {
+    domtoimage.toBlob(snippetContainerNode, config).then((blob) => {
       snippetNode.style.resize = ''
       snippetContainerNode.style.resize = ''
-      serializeBlob(blob, serializedBlob => {
-        shoot(serializedBlob)
+      serializeBlob(blob, (serializedBlob) => {
+        shoot(serializedBlob, type)
       })
     })
   }
 
-  function shootSnippet() {
+  function shootSnippet(type = 'shoot') {
     const width = snippetNode.offsetWidth * 2
     const height = snippetNode.offsetHeight * 2
     const config = {
@@ -171,19 +180,19 @@
         transform: 'scale(2)',
         'transform-origin': 'center',
         padding: 0,
-        background: 'none'
-      }
+        background: 'none',
+      },
     }
 
     // Hide resizer before capture
     snippetNode.style.resize = 'none'
     snippetContainerNode.style.resize = 'none'
 
-    domtoimage.toBlob(snippetContainerNode, config).then(blob => {
+    domtoimage.toBlob(snippetContainerNode, config).then((blob) => {
       snippetNode.style.resize = ''
       snippetContainerNode.style.resize = ''
-      serializeBlob(blob, serializedBlob => {
-        shoot(serializedBlob)
+      serializeBlob(blob, (serializedBlob) => {
+        shoot(serializedBlob, type)
       })
     })
   }
@@ -200,7 +209,7 @@
           duration: 40,
           onReady: () => {
             obturateur.className = 'obturateur filling'
-          }
+          },
         },
         () => {
           setTimeout(() => {
@@ -212,7 +221,29 @@
     }
   })
 
-  window.addEventListener('message', e => {
+  copy.addEventListener('mouseover', () => {
+    if (!isInAnimation) {
+      isInAnimation = true
+
+      new Vivus(
+        'save',
+        {
+          duration: 40,
+          onReady: () => {
+            copy.className = 'copy filling'
+          },
+        },
+        () => {
+          setTimeout(() => {
+            isInAnimation = false
+            copy.className = 'copy'
+          }, 700)
+        }
+      )
+    }
+  })
+
+  window.addEventListener('message', (e) => {
     if (e) {
       if (e.data.type === 'init') {
         const { fontFamily, bgColor } = e.data
@@ -228,7 +259,6 @@
         } else {
           snippetContainerNode.style.background = 'none'
         }
-
       } else if (e.data.type === 'update') {
         document.execCommand('paste')
       } else if (e.data.type === 'restore') {
@@ -253,10 +283,10 @@
 })()
 
 function getRgba(hex, transparentBackground) {
-  const bigint = parseInt(hex.slice(1), 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
+  const bigint = parseInt(hex.slice(1), 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
   const a = transparentBackground ? 0 : 1
   return `rgba(${r}, ${g}, ${b}, ${a})`
 }
